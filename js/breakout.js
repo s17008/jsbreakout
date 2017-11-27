@@ -3,7 +3,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // 初期化
     const canvas = document.getElementById('board');
-    const breakout = new Breakout({
+    new Breakout({
         canvas: canvas,
         interval: 1000 / 60,    // 60 FPS
         paddle: {
@@ -40,12 +40,12 @@ class Breakout {
         this.canvas = options.canvas;
         this.context = this.canvas.getContext('2d');
         // ゲーム画面のサイズを取得
-        this.leftKey = false;
-        this.rightKey = false;
-
-        // 内部で使用するプロパティの初期化
         Breakout.width = this.canvas.width;
         Breakout.height = this.canvas.height;
+
+        // 内部で使用するプロパティの初期化
+        this.leftKey = false;
+        this.rightKey = false;
 
         // Paddleの初期化
         this.paddle = new Paddle(
@@ -79,7 +79,7 @@ class Breakout {
             this.rightKey = true;
         } else if (evt.code === 'Space') {
             // debag
-            this.ball.setSpeed(5, 120);
+            this.ball.setSpeed(5, 125);
         }
     }
 
@@ -122,7 +122,6 @@ class Entity {
     }
 
     hit() {
-
     }
 }
 
@@ -254,7 +253,9 @@ class Ball {
         this.x += this.dx;
         this.y += this.dy;
 
-        if (this.collision())
+        if (this.collision()) {
+            this.dy *= -1;
+        }
     }
 
     collision() {
@@ -262,9 +263,9 @@ class Ball {
         this.targetList.forEach((target) => {
             // 角チェック
             const points = target.getCornerPoints();
-            points.forEach((points) => {
+            points.forEach((point) => {
                 const a = Math.sqrt(
-                    Math.pow(this.x - point[0], 2) + Math.pow(this.y - point[1], 2))
+                    Math.pow(this.x - point.x, 2) + Math.pow(this.y - point.y, 2))
                 if (a <= this.radius) {
                     isCollision = true;
                     target.hit();
@@ -274,8 +275,11 @@ class Ball {
             // 各側面のチェック
             const bl = this.x - this.radius;
             const br = this.x + this.radius;
-            if (points[0].x < br || bl < points[1].x) {
-                if (points[0].y < bb || points[2].y) {
+            const bt = this.y - this.radius;
+            const bb = this.y + this.radius;
+            if (points[0].x < br && bl < points[1].x) {
+                if (points[0].y < bb && bt < points[2].y) {
+                    //console.log(bl, br, bt, bb, points[0].x, points[1].x, points[0].y, points[2].y)
                     isCollision = true;
                     target.hit();
                 }
@@ -327,7 +331,7 @@ class Ball {
     }
 
     /**
-     * 移動スピートの左右反転
+     * 移動スピートの上下反転
      */
     reflectionY() {
         this.dy *= -1;
