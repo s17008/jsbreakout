@@ -35,6 +35,18 @@ class Breakout {
         return Breakout.gameHeight;
     }
 
+    static get isGameOver() {
+        return Breakout._game_over === true;
+    }
+
+    static setGameOver(f) {
+        if (f instanceof Boolean) {
+            Breakout._game_over = f;
+            return;
+        }
+        Breakout._game_over = true;
+    }
+
     constructor(options) {
         // 受け取ったパラメータをプロパティに保存
         this.canvas = options.canvas;
@@ -78,7 +90,7 @@ class Breakout {
         } else if (evt.code === 'ArrowRight' /* 右キー */) {
             this.rightKey = true;
         } else if (evt.code === 'Space') {
-            // debag
+            // debug
             this.ball.setSpeed(5, 125);
         }
     }
@@ -99,7 +111,18 @@ class Breakout {
         if (this.rightKey) {
             this.paddle.moveRight();
         }
-        this.ball.draw(this.context);
+        if (Breakout.isGameOver) {
+            this.context.save();
+
+            this.context.fillStyle = "red";
+            this.context.font = "48pt Arial";
+            this.context.textAlign = "center";
+            this.context.fillText("GameOver", Breakout.width / 2, Breakout.height / 2);
+
+            this.context.restore();
+        } else {
+            this.ball.draw(this.context);
+        }
         this.paddle.draw(this.context);
     }
 }
@@ -258,6 +281,9 @@ class Ball {
         }
     }
 
+    /**
+     * 衝突判定のメソッド
+     */
     collision() {
         let isCollision = false;
         this.targetList.forEach((target) => {
@@ -265,7 +291,7 @@ class Ball {
             const points = target.getCornerPoints();
             points.forEach((point) => {
                 const a = Math.sqrt(
-                    Math.pow(this.x - point.x, 2) + Math.pow(this.y - point.y, 2))
+                    Math.pow(this.x - point.x, 2) + Math.pow(this.y - point.y, 2));
                 if (a <= this.radius) {
                     isCollision = true;
                     target.hit();
@@ -279,8 +305,8 @@ class Ball {
             const bb = this.y + this.radius;
             if (points[0].x < br && bl < points[1].x) {
                 if (points[0].y < bb && bt < points[2].y) {
-                    //console.log(bl, br, bt, bb, points[0].x, points[1].x, points[0].y, points[2].y)
                     isCollision = true;
+                    this.y -= bb - points[0].y;
                     target.hit();
                 }
             }
@@ -291,47 +317,64 @@ class Ball {
     }
 
     /**
+     * 反射角度を変える(1度)
+     */
+    changeAngle(ccw = false) {
+        let theta = Math.atan(this.dy / this.dx);
+        const speed = this.dx / Math.cos(theta);
+        if (ccw) {
+            theta = Math.PI / 180;
+        } else {
+            theta += Math.PI / 180;
+        }
+        if (theta <= 0.08726646259971647 || theta >= 3.0543261909900763) {
+            // 変更なしにする
+            return;
+        }
+        this.dx = Math.cos(theta) * speed;
+        this.dy = Math.sin(theta) * speed;
+    }
+
+    /**
      * はみ出ないように位置を調整する
      */
     fixPosition() {
-        //画面左側を超えてるか判定と座標修正
+        // 画面左側を超えてるか判定と座標修正
         const left = this.x - this.radius;
         if (left < 0) {
             this.x += Math.abs(left);
             this.reflectionX();
         }
 
-        //画面上側を超えてるか判定と座標修正
+        // 画面上側を超えているか判定と座標修正
         const top = this.y - this.radius;
         if (top < 0) {
             this.y += Math.abs(top);
             this.reflectionY();
         }
 
-        //画面右側を超えているか判定と座標修正
+        // 画面右側を超えているか判定と座標修正
         const right = this.x + this.radius;
         if (right > Breakout.width) {
             this.x -= right - Breakout.width;
             this.reflectionX();
         }
 
-        //画面下側を超えてるか判定と一時的に座標修正
-        const bottom = this.y + this.radius;
-        if (bottom > Breakout.height) {
-            this.y -= bottom - Breakout.height;
-            this.reflectionY();
+        // 画面下側を超えているか判定と一時的に座標修正
+        if (top > Breakout.height) {
+            Breakout.setGameOver();
         }
     }
 
     /**
-     * 移動スピートの左右反転
+     * 移動スピードの左右反転
      */
     reflectionX() {
         this.dx *= -1;
     }
 
     /**
-     * 移動スピートの上下反転
+     * 移動スピードの上下反転
      */
     reflectionY() {
         this.dy *= -1;
@@ -342,7 +385,7 @@ class Ball {
      *
      * @param context CanvasRenderingContext2D
      */
-    draw(context){
+    draw(context) {
         // 移動関連
         this.move();
         this.fixPosition();
