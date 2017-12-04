@@ -1,6 +1,4 @@
 window.addEventListener('DOMContentLoaded', () => {
-    console.log("breakout initializing...");
-
     // 初期化
     const canvas = document.getElementById('board');
     new Breakout({
@@ -224,6 +222,21 @@ class Paddle extends Entity {
             this.x -= right - Breakout.width;
         }
     }
+
+    /**
+     * あたった後の何か
+     */
+    hit(ball) {
+        // ボールがPaddleの右1/4にあるか
+        if (this.x + this.width / 4 < ball.x) {
+            ball.changeAngle();
+            return;
+        }
+        // ボールがPaddleの左1/4にあるか
+        if (this.x - this.width / 4 > ball.x) {
+            ball.changeAngle(true);
+        }
+    }
 }
 
 class Ball {
@@ -294,7 +307,7 @@ class Ball {
                     Math.pow(this.x - point.x, 2) + Math.pow(this.y - point.y, 2));
                 if (a <= this.radius) {
                     isCollision = true;
-                    target.hit();
+                    target.hit(this);
                 }
             }, this);
 
@@ -307,7 +320,7 @@ class Ball {
                 if (points[0].y < bb && bt < points[2].y) {
                     isCollision = true;
                     this.y -= bb - points[0].y;
-                    target.hit();
+                    target.hit(this);
                 }
             }
 
@@ -317,17 +330,18 @@ class Ball {
     }
 
     /**
-     * 反射角度を変える(1度)
+     * 反射角度を変える(5度)
      */
     changeAngle(ccw = false) {
         let theta = Math.atan(this.dy / this.dx);
         const speed = this.dx / Math.cos(theta);
         if (ccw) {
-            theta = Math.PI / 180;
+            theta -= Math.PI * 5 / 180;
         } else {
-            theta += Math.PI / 180;
+            theta += Math.PI * 5 / 180;
         }
-        if (theta <= 0.08726646259971647 || theta >= 3.0543261909900763) {
+
+        if (theta <= -0.7853981634 || theta >= 0.5235987756) {
             // 変更なしにする
             return;
         }
